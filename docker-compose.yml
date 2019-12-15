@@ -1,0 +1,40 @@
+version: "2"
+services:
+  app:
+    build: .
+    volumes:
+      - .:/go/src/app
+    working_dir: /go/src/app
+    command: go run main.go
+    ports:
+      - "8080:8080"
+    links:
+      - redis
+      - postgres
+      # We need this line to simulate the agent running on the same host than our app
+      - datadog:localhost
+
+  redis:
+    image: redis:4-alpine
+  postgres:
+    image: postgres
+    volumes:
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+
+  datadog:
+    build: datadog
+    links:
+     - redis
+     - postgres
+    environment:
+     - DD_APM_ENABLED=true
+     - DD_SITE=datadoghq.eu
+     - DD_LOGS_ENABLED=true
+     - DD_BIND_HOST=0.0.0.0
+     - DD_API_KEY=746c78b77970e2ea88f09916aa76743b
+     - DD_PROCESS_AGENT_ENABLED=true  
+     - DD_APM_NON_LOCAL_TRAFFIC=true
+    volumes:
+     - /var/run/docker.sock:/var/run/docker.sock
+     - /proc/:/host/proc/:ro
+     - /sys/fs/cgroup:/host/sys/fs/cgroup:ro
